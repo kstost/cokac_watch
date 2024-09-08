@@ -2,11 +2,12 @@ import os
 import json
 import threading
 import logging
+import sys
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import unicodedata
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S', stream=sys.stdout)
 
 class ConfigHandler(FileSystemEventHandler):
     def __init__(self, config_path, callback):

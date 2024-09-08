@@ -1,9 +1,11 @@
 import os
 import plistlib
 import subprocess
+import venv
 import logging
 import stat
 from pathlib import Path
+import sys
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -20,17 +22,34 @@ def run_command(command):
         logging.error(f"표준 에러: {e.stderr}")
         raise
 
+def create_and_activate_venv():
+    venv_dir = os.path.join(os.getcwd(), 'venv')
+    venv.create(venv_dir, with_pip=True)
+    
+    if sys.platform == 'win32':
+        python_exe = os.path.join(venv_dir, 'Scripts', 'python.exe')
+    else:
+        python_exe = os.path.join(venv_dir, 'bin', 'python')
+    
+    os.environ['VIRTUAL_ENV'] = venv_dir
+    os.environ['PATH'] = os.pathsep.join([os.path.dirname(python_exe), os.environ.get('PATH', '')])
+    sys.prefix = venv_dir
+    sys.executable = python_exe
+
+    return sys.executable
+
 try:
     # 현재 작업 디렉토리 가져오기
     current_dir = Path.cwd()
     logging.info(f"현재 작업 디렉토리: {current_dir}")
 
-    # 시스템 Python 경로 확인
-    python_path = run_command("which python3").strip()
-    logging.info(f"사용할 Python 경로: {python_path}")
+    # 가상 환경 생성 및 활성화
+    venv_python = create_and_activate_venv()
+    venv_python = Path(venv_python)  # venv_python을 Path 객체로 변환
 
-    # 시스템 pip를 사용하여 필요한 패키지 설치
-    run_command(f"{python_path} -m pip install -r requirements.txt")
+    # pip 업그레이드 및 패키지 설치
+    run_command(f"{venv_python} -m pip install --upgrade pip")
+    run_command(f"{venv_python} -m pip install -r requirements.txt")
 
     # Python 스크립트 경로 확인
     python_script = current_dir / 'cokac_watch.py'
@@ -43,7 +62,11 @@ try:
     # plist 파일 내용 수정
     plist_content = {
         'Label': 'com.cokac.folderwatcher',
-        'ProgramArguments': [python_path, str(python_script)],
+        'ProgramArguments': [
+            '/bin/bash',
+            '-c',
+            f'source {venv_python.parent.parent}/bin/activate && python {python_script}'
+        ],
         'RunAtLoad': True,
         'KeepAlive': True,
         'WorkingDirectory': str(current_dir),
@@ -78,6 +101,21 @@ try:
 
     logging.info("LaunchAgent가 로드되었습니다. 시스템을 재시작하거나 로그아웃 후 다시 로그인하면 프로그램이 자동으로 시작됩니다.")
 
+    # 로그 확인 명령어 안내
+    log_command = f"tail -f {home_dir}/Library/Logs/com.cokac.folderwatcher.log"
+    err_command = f"tail -f {home_dir}/Library/Logs/com.cokac.folderwatcher.err"
+    plist_command = f"cat {home_dir}/Library/LaunchAgents/com.cokac.folderwatcher.plist"
+    
+    logging.info("로그 파일을 확인하려면 다음 명령어를 사용하세요:")
+    logging.info(log_command)
+    logging.info("에러 로그를 확인하려면 다음 명령어를 사용하세요:")
+    logging.info(err_command)
+    logging.info("LaunchAgent plist 파일 내용을 확인하려면 다음 명령어를 사용하세요:")
+    logging.info(plist_command)
+
 except Exception as e:
     logging.error(f"설치 중 오류 발생: {str(e)}")
     raise
+
+# venv_path 변수 정의
+venv_path = Path('venv')
