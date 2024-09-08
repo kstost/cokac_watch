@@ -1,7 +1,6 @@
 import os
 import plistlib
 import subprocess
-import venv
 import logging
 import stat
 from pathlib import Path
@@ -26,16 +25,12 @@ try:
     current_dir = Path.cwd()
     logging.info(f"현재 작업 디렉토리: {current_dir}")
 
-    # 가상 환경 경로 설정 및 생성
-    venv_path = current_dir / 'venv'
-    if not venv_path.exists():
-        logging.info("가상 환경을 생성합니다.")
-        venv.create(venv_path, with_pip=True)
-        logging.info("가상 환경이 생성되었습니다.")
+    # 시스템 Python 경로 확인
+    python_path = run_command("which python3").strip()
+    logging.info(f"사용할 Python 경로: {python_path}")
 
-    # 가상 환경의 pip를 사용하여 필요한 패키지 설치
-    pip_path = venv_path / 'bin' / 'pip'
-    run_command(f"{pip_path} install -r requirements.txt")
+    # 시스템 pip를 사용하여 필요한 패키지 설치
+    run_command(f"{python_path} -m pip install -r requirements.txt")
 
     # Python 스크립트 경로 확인
     python_script = current_dir / 'cokac_watch.py'
@@ -48,11 +43,10 @@ try:
     # plist 파일 내용 수정
     plist_content = {
         'Label': 'com.cokac.folderwatcher',
-        'ProgramArguments': [str(venv_path / 'bin' / 'python'), str(python_script)],
+        'ProgramArguments': [python_path, str(python_script)],
         'RunAtLoad': True,
         'KeepAlive': True,
         'WorkingDirectory': str(current_dir),
-        'EnvironmentVariables': {'PATH': f"{venv_path}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"},
         'StandardOutPath': str(home_dir / 'Library/Logs/com.cokac.folderwatcher.log'),
         'StandardErrorPath': str(home_dir / 'Library/Logs/com.cokac.folderwatcher.err')
     }
