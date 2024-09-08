@@ -69,7 +69,6 @@ try:
         ],
         'RunAtLoad': True,
         'KeepAlive': True,
-        'WorkingDirectory': str(current_dir),
         'StandardOutPath': str(home_dir / 'Library/Logs/com.cokac.folderwatcher.log'),
         'StandardErrorPath': str(home_dir / 'Library/Logs/com.cokac.folderwatcher.err')
     }
